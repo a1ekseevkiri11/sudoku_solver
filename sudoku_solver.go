@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -25,9 +26,8 @@ var (
 		{".", ".", ".", "."},
 	}
 
-	boardSize  = len(testBoarNineXNine)
-	countSquar = 3
-	sizeSquar  = boardSize / countSquar
+	boardSize = 9
+	squarSize = 3
 )
 
 const (
@@ -83,8 +83,8 @@ func checkValidate(board [][]string, num string, positionX int, positionY int) b
 
 	//check box
 	boxPositionX, boxPositionY := positionitionSquar(positionX, positionY)
-	for x := boxPositionX; x < boxPositionX+sizeSquar; x++ {
-		for y := boxPositionY; y < boxPositionY+sizeSquar; y++ {
+	for x := boxPositionX; x < boxPositionX+squarSize; x++ {
+		for y := boxPositionY; y < boxPositionY+squarSize; y++ {
 			if board[x][y] == num && x != positionX && y != positionY {
 				return false
 			}
@@ -94,7 +94,7 @@ func checkValidate(board [][]string, num string, positionX int, positionY int) b
 }
 
 func positionitionSquar(positionX int, positionY int) (int, int) {
-	return (positionX / countSquar) * countSquar, (positionY / countSquar) * countSquar
+	return (positionX / squarSize) * squarSize, (positionY / squarSize) * squarSize
 }
 
 func searchEmpty(board [][]string) (int, int, bool) {
@@ -109,13 +109,14 @@ func searchEmpty(board [][]string) (int, int, bool) {
 }
 
 func printBoard(board [][]string) {
-	fmt.Printf("\n-------------------\n")
+	delimiter := strings.Repeat("-", boardSize*2+boardSize/6)
+	fmt.Print("\n" + delimiter + "\n")
 	for x := 0; x < boardSize; x++ {
 		fmt.Printf("|")
 		for y := 0; y < boardSize; y++ {
 			fmt.Printf(board[x][y])
 			fmt.Printf("|")
 		}
-		fmt.Printf("\n-------------------\n")
+		fmt.Print("\n" + delimiter + "\n")
 	}
 }
