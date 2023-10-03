@@ -2,46 +2,98 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"runtime"
 	"strconv"
 	"strings"
-)
+	"time"
 
-var (
-	testBoarNineXNine = [][]string{
-		{"5", "3", ".", ".", "7", ".", ".", ".", "."},
-		{"6", ".", ".", "1", "9", "5", ".", ".", "."},
-		{".", "9", "8", ".", ".", ".", ".", "6", "."},
-		{"8", ".", ".", ".", "6", ".", ".", ".", "3"},
-		{"4", ".", ".", "8", ".", "3", ".", ".", "1"},
-		{"7", ".", ".", ".", "2", ".", ".", ".", "6"},
-		{".", "6", ".", ".", ".", ".", "2", "8", "."},
-		{".", ".", ".", "4", "1", "9", ".", ".", "5"},
-		{".", ".", ".", ".", "8", ".", ".", "7", "9"},
-	}
-
-	testBoarFourXFour = [][]string{
-		{".", ".", ".", "."},
-		{".", ".", ".", "."},
-		{".", ".", ".", "."},
-		{".", ".", ".", "."},
-	}
-
-	boardSize = 9
-	squarSize = 3
+	"github.com/micmonay/keybd_event"
+	"github.com/tebeka/selenium"
+	"github.com/tebeka/selenium/chrome"
 )
 
 const (
 	emptyCell string = "."
+	boardSize        = 9
+	squarSize        = 3
 )
 
-func main() {
-	printBoard(testBoarNineXNine)
-	if solveSudoku(testBoarNineXNine) {
-		fmt.Println("Решил!")
-		printBoard(testBoarNineXNine)
-		return
+func inputBoardFromSite(driver selenium.WebDriver) [][]string {
+	var testBoarNineXNine = [][]string{
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
+		{".", ".", ".", ".", ".", ".", ".", ".", "."},
 	}
-	fmt.Println("Не решается чета")
+	for i := 0; i < 9*9; i++ {
+		element, err := driver.FindElement(selenium.ByID, strconv.Itoa(i))
+		if err != nil {
+			log.Fatal(err)
+		}
+		text, err := element.Text()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if text != "" {
+			testBoarNineXNine[i/9][i%9] = text
+		}
+	}
+	return testBoarNineXNine
+}
+
+func main() {
+
+	service, err := selenium.NewChromeDriverService("chromedriver", 4444)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer service.Stop()
+
+	caps := selenium.Capabilities{}
+	caps.AddChrome(chrome.Capabilities{Args: []string{
+		"window-size=1920x1080",
+		"--no-sandbox",
+		"--disable-dev-shm-usage",
+		"disable-gpu",
+		// "--headless",  // comment out this line to see the browser
+	}})
+
+	driver, err := selenium.NewRemote(caps, "")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = driver.Get("https://absite.ru/sudoku/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		fmt.Print("0 - return\n1 - solve sudocu\n")
+		comand := 0
+		fmt.Scanf("%d\n", &comand)
+		switch comand {
+		case 0:
+			driver.Quit()
+			return
+		case 1:
+			testBoarNineXNine := inputBoardFromSite(driver)
+			printBoard(testBoarNineXNine)
+			if solveSudoku(testBoarNineXNine) {
+				fmt.Println("Решил!")
+				printBoard(testBoarNineXNine)
+				inputBoardInSite(testBoarNineXNine)
+			} else {
+				fmt.Println("Не решается чета")
+			}
+		default:
+			continue
+		}
+	}
 }
 
 func solveSudoku(board [][]string) bool {
@@ -118,5 +170,53 @@ func printBoard(board [][]string) {
 			fmt.Printf("|")
 		}
 		fmt.Print("\n" + delimiter + "\n")
+	}
+}
+
+var (
+	mapping = map[string]int{
+		"1": keybd_event.VK_1,
+		"2": keybd_event.VK_2,
+		"3": keybd_event.VK_3,
+		"4": keybd_event.VK_4,
+		"5": keybd_event.VK_5,
+		"6": keybd_event.VK_6,
+		"7": keybd_event.VK_7,
+		"8": keybd_event.VK_8,
+		"9": keybd_event.VK_9,
+	}
+)
+
+func inputBoardInSite(board [][]string) {
+	kb, err := keybd_event.NewKeyBonding()
+	if err != nil {
+		panic(err)
+	}
+
+	if runtime.GOOS == "windows" {
+		time.Sleep(5 * time.Second)
+	}
+
+	for x := 0; x < boardSize; x++ {
+		kb.SetKeys(keybd_event.VK_UP)
+		kb.Press()
+		time.Sleep(10 * time.Microsecond)
+		kb.Release()
+		kb.SetKeys(keybd_event.VK_LEFT)
+		kb.Press()
+		time.Sleep(10 * time.Microsecond)
+		kb.Release()
+	}
+
+	for x := 0; x < boardSize; x++ {
+		for y := 0; y < boardSize; y++ {
+			kb.SetKeys(mapping[board[x][y]])
+			kb.Press()
+			kb.Release()
+			kb.SetKeys(keybd_event.VK_RIGHT)
+			kb.Press()
+			time.Sleep(10 * time.Microsecond)
+			kb.Release()
+		}
 	}
 }
